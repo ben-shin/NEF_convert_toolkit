@@ -23,7 +23,7 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path="peaks.tab", swap=False
             if clean_line == 'stop_' or clean_line.startswith('save_'):
                 is_peak_loop = False
                 continue
-                
+
             if clean_line.startswith('_') or not clean_line:
                 continue
 
@@ -74,3 +74,26 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path="peaks.tab", swap=False
         f.write("FORMAT %5d %9.3f %9.3f %6.3f %6.3f %8.3f %8.3f %9.3f %9.3f %7.3f %7.3f %8.3f %8.3f %4d %4d %4d %4d %+e %+e %+e %.5f %d %s %4d %4d\n\n")
         f.write("NULLVALUE -666\n")
         f.write("NULLSTRING *\n\n")
+        
+        for p in peak_data:
+            line = (
+                f"{p['INDEX']:5d} {p['X_AXIS']:9.3f} {p['Y_AXIS']:9.3f} {p['DX']:6.3f} {p['DY']:6.3f} "
+                f"{p['X_PPM']:8.3f} {p['Y_PPM']:8.3f} {p['X_HZ']:9.3f} {p['Y_HZ']:9.3f} "
+                f"{p['XW']:7.3f} {p['YW']:7.3f} {p['XW_HZ']:8.3f} {p['YW_HZ']:8.3f} "
+                f"{p['X1']:4d} {p['X3']:4d} {p['Y1']:4d} {p['Y3']:4d} "
+                f"{p['HEIGHT']:+e} {p['DHEIGHT']:+e} {p['VOL']:+e} "
+                f"{p['PCHI2']:.5f} {p['TYPE']:d} {p['ASS']} {p['CLUSTID']:4d} {p['MEMCNT']:4d}\n"
+            )
+            f.write(line)
+    print(f"Success: {len(peak_data)} peaks written to {output_path}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Convert NEF peak lists to nmrDraw .tab format')
+    parser.add_argument('--data', required=True, help='Path to the input .nef file')
+    parser.add_argument('--sfh', type=float, required=True, help='Spectrometer frequency for Hydrogen (MHz)')
+    parser.add_argument('--sfn', type=float, required=True, help='Spectrometer frequency for Nitrogen (MHz)')
+    parser.add_argument('--out', default='peaks.tab', help='Output filename')
+    parser.add_argument('--swap', action='store_true', help='Swap axes (Use if N15 is on X-axis)')
+    
+    args = parser.parse_args()
+    convert_nef_to_tab(args.data, args.sfh, args.sfn, args.out, args.swap)
