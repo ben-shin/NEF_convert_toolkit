@@ -75,6 +75,6 @@ def convert_nef_to_tab(nef_path, sf_h, sf_n):
   print(f"Converted {len(tab_data)} peaks.")
   print(f"Output saved to {output_file}")
 
-if __name == "__main__":
+if __name__ == "__main__":
   args = parser.parse_args()
   convert_nef_to_tab(args.data, args.sfh, args.sfn)
