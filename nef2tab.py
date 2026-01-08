@@ -1,17 +1,6 @@
 import argparse
 
-def convert_nef_to_tab(input_path, sfh, sfn, output_path, swap, dimx, dimy):
-    # Setup constants based on your fid.com and nhsqc.com
-    # Dimension X (after swap) = N15
-    car_n = 117.006
-    sw_n_hz = 2129.472
-    sw_n_ppm = sw_n_hz / sfn  # ~35.006 ppm
-    
-    # Dimension Y (after swap) = H1
-    ext_h_start = 11.0
-    ext_h_end = 6.0
-    ext_h_width = ext_h_start - ext_h_end  # 5.0 ppm
-    
+def convert_nef_to_tab(input_path, sfh, sfn, output_path):
     try:
         with open(input_path, 'r') as f:
             lines = f.readlines()
@@ -38,30 +27,23 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path, swap, dimx, dimy):
             parts = clean_line.split()
             try:
                 idx = int(parts[0])
-                height = float(parts[4]) if parts[4] != '.' else 0.0
                 vol = float(parts[2]) if parts[2] != '.' else 0.0
+                height = float(parts[4]) if parts[4] != '.' else 0.0
                 n_ppm = float(parts[6])
                 h_ppm = float(parts[8])
                 
+                # Assignment mapping
                 res_num = parts[11] if len(parts) > 11 and parts[11] != '.' else ""
                 res_name = parts[12] if len(parts) > 12 and parts[12] != '.' else ""
                 atom = parts[13] if len(parts) > 13 and parts[13] != '.' else ""
                 assig = f"{res_num}{res_name}-{atom}" if res_num else "None"
 
-                # 1. AXIS X (Nitrogen)
-                # Position = ( (Carrier + SW/2) - Target_PPM ) / SW * Total_Points
-                n_edge = car_n + (sw_n_ppm / 2.0)
-                x_axis = ((n_edge - n_ppm) / sw_n_ppm) * dimx
-                
-                # 2. AXIS Y (Proton - EXTRACTED 11 to 6)
-                # In EXT, Point 1 is ext_h_start. 
-                y_axis = ((ext_h_start - h_ppm) / ext_h_width) * dimy
-
+                # We set X_PPM to Nitrogen and Y_PPM to Proton to match your swapped FT2
                 row = [
-                    idx, x_axis, y_axis, 0.0, 0.0,
-                    n_ppm, h_ppm, n_ppm * sfn, h_ppm * sfh,
-                    0.020, 0.100, 0.020 * sfn, 0.100 * sfh,
-                    int(x_axis), int(x_axis), int(y_axis), int(y_axis),
+                    idx, 0.0, 0.0, 0.0, 0.0,      # ID, Axis, DX, DY
+                    n_ppm, h_ppm, n_ppm * sfn, h_ppm * sfh, # PPM and HZ
+                    0.020, 0.100, 1.0, 1.0,       # Widths
+                    0, 0, 0, 0,                   # X1, X3, Y1, Y3
                     height, 0.0, vol, 0.0, 1, assig, idx, 1
                 ]
                 peak_data.append(row)
@@ -75,15 +57,13 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path, swap, dimx, dimy):
         f.write("NULLSTRING *\n\n")
         for p in peak_data:
             f.write("%5d %9.3f %9.3f %6.3f %6.3f %8.3f %8.3f %9.3f %9.3f %7.3f %7.3f %8.3f %8.3f %4d %4d %4d %4d %+14.6e %+14.6e %+14.6e %.5f %d %s %4d %4d\n" % tuple(p))
-    print(f"Success: {len(peak_data)} peaks written.")
+    print(f"Success: {len(peak_data)} peaks written to {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True)
     parser.add_argument('--sfh', type=float, required=True)
     parser.add_argument('--sfn', type=float, required=True)
-    parser.add_argument('--dimx', type=int, default=1024)
-    parser.add_argument('--dimy', type=int, default=512)
     parser.add_argument('--out', default='peaks.tab')
     args = parser.parse_args()
-    convert_nef_to_tab(args.data, args.sfh, args.sfn, args.out, True, args.dimx, args.dimy)
+    convert_nef_to_tab(args.data, args.sfh, args.sfn, args.out)
