@@ -1,23 +1,16 @@
 import argparse
-import subprocess
-import os
 
-def get_pipe_dims(ft2_path):
-    """Extracts the actual X and Y size from the NMRPipe file header."""
-    try:
-        cmd = f"nmrPipe -fn HEAD {ft2_path} | grep SIZE"
-        result = subprocess.check_output(cmd, shell=True).decode()
-        # Example output: Z_SIZE : 1  Y_SIZE : 512  X_SIZE : 1024
-        parts = result.split()
-        y_size = int(parts[5])
-        x_size = int(parts[8])
-        return x_size, y_size
-    except:
-        print("Warning: Could not read .ft2 header. Using default dims.")
-        return 1024, 512
-
-def convert_nef_to_tab(input_path, sfh, sfn, ft2_path, output_path, swap):
-    dx, dy = get_pipe_dims(ft2_path)
+def convert_nef_to_tab(input_path, sfh, sfn, output_path, swap, dimx, dimy):
+    # Setup constants based on your fid.com and nhsqc.com
+    # Dimension X (after swap) = N15
+    car_n = 117.006
+    sw_n_hz = 2129.472
+    sw_n_ppm = sw_n_hz / sfn  # ~35.006 ppm
+    
+    # Dimension Y (after swap) = H1
+    ext_h_start = 11.0
+    ext_h_end = 6.0
+    ext_h_width = ext_h_start - ext_h_end  # 5.0 ppm
     
     try:
         with open(input_path, 'r') as f:
@@ -45,8 +38,8 @@ def convert_nef_to_tab(input_path, sfh, sfn, ft2_path, output_path, swap):
             parts = clean_line.split()
             try:
                 idx = int(parts[0])
-                vol = float(parts[2]) if parts[2] != '.' else 0.0
                 height = float(parts[4]) if parts[4] != '.' else 0.0
+                vol = float(parts[2]) if parts[2] != '.' else 0.0
                 n_ppm = float(parts[6])
                 h_ppm = float(parts[8])
                 
@@ -55,14 +48,20 @@ def convert_nef_to_tab(input_path, sfh, sfn, ft2_path, output_path, swap):
                 atom = parts[13] if len(parts) > 13 and parts[13] != '.' else ""
                 assig = f"{res_num}{res_name}-{atom}" if res_num else "None"
 
-                x_ppm, y_ppm = (n_ppm, h_ppm) if swap else (h_ppm, n_ppm)
-                x_sf, y_sf = (sfn, sfh) if swap else (sfh, sfn)
+                # 1. AXIS X (Nitrogen)
+                # Position = ( (Carrier + SW/2) - Target_PPM ) / SW * Total_Points
+                n_edge = car_n + (sw_n_ppm / 2.0)
+                x_axis = ((n_edge - n_ppm) / sw_n_ppm) * dimx
+                
+                # 2. AXIS Y (Proton - EXTRACTED 11 to 6)
+                # In EXT, Point 1 is ext_h_start. 
+                y_axis = ((ext_h_start - h_ppm) / ext_h_width) * dimy
 
                 row = [
-                    idx, 0.0, 0.0, 0.0, 0.0,
-                    x_ppm, y_ppm, x_ppm * x_sf, y_ppm * y_sf,
-                    0.020, 0.100, 0.020 * x_sf, 0.100 * y_sf,
-                    0, 0, 0, 0,
+                    idx, x_axis, y_axis, 0.0, 0.0,
+                    n_ppm, h_ppm, n_ppm * sfn, h_ppm * sfh,
+                    0.020, 0.100, 0.020 * sfn, 0.100 * sfh,
+                    int(x_axis), int(x_axis), int(y_axis), int(y_axis),
                     height, 0.0, vol, 0.0, 1, assig, idx, 1
                 ]
                 peak_data.append(row)
@@ -76,19 +75,15 @@ def convert_nef_to_tab(input_path, sfh, sfn, ft2_path, output_path, swap):
         f.write("NULLSTRING *\n\n")
         for p in peak_data:
             f.write("%5d %9.3f %9.3f %6.3f %6.3f %8.3f %8.3f %9.3f %9.3f %7.3f %7.3f %8.3f %8.3f %4d %4d %4d %4d %+14.6e %+14.6e %+14.6e %.5f %d %s %4d %4d\n" % tuple(p))
-
-    print(f"Syncing peaks to {ft2_path} coordinates...")
-    sync_cmd = f"pkShift -in {output_path} -out {output_path} -unfold -real -ppm -spec {ft2_path}"
-    os.system(sync_cmd)
-    print(f"Success. Peaks in {output_path} are now synced to the spectrum grid.")
+    print(f"Success: {len(peak_data)} peaks written.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True)
-    parser.add_argument('--ft2', required=True, help='Path to hsqc.ft2')
     parser.add_argument('--sfh', type=float, required=True)
     parser.add_argument('--sfn', type=float, required=True)
+    parser.add_argument('--dimx', type=int, default=1024)
+    parser.add_argument('--dimy', type=int, default=512)
     parser.add_argument('--out', default='peaks.tab')
-    parser.add_argument('--swap', action='store_true')
     args = parser.parse_args()
-    convert_nef_to_tab(args.data, args.sfh, args.sfn, args.ft2, args.out, args.swap)
+    convert_nef_to_tab(args.data, args.sfh, args.sfn, args.out, True, args.dimx, args.dimy)
