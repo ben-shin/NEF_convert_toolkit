@@ -57,7 +57,7 @@ def convert_nef_to_nmrdraw(input_path, sfh, sfn, output_path="peaks.tab"):
         'PCHI2': 0.00000, 'TYPE': 1, 'ASS': assig,
         'CLUSTID': idx, 'MEMCNT': 1
         }
-        peak_data.append(row)
+      peak_data.append(row)
 
   with open(output_file, 'w') as f:
     f.write("VARS   INDEX X_AXIS Y_AXIS DX DY X_PPM Y_PPM X_HZ Y_HZ XW YW XW_HZ YW_HZ X1 X3 Y1 Y3 HEIGHT DHEIGHT VOL PCHI2 TYPE ASS CLUSTID MEMCNT\n")
