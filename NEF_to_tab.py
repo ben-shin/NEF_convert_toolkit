@@ -41,11 +41,11 @@ def convert_nef_to_tab(nef_path, sf_h, sf_n):
 
   output_file = nef_path.replace('.nef', '.tab')
   header = [
-    "REMARK nmrDraw Peak List",
-    "DATA_TYPE 2D_PEAK_LIST",
+    "# REMARK nmrDraw Peak List",
+    "# DATA_TYPE 2D_PEAK_LIST",
     "VARS   INDEX ID X_PPM Y_PPM X_HZ Y_HZ HEIGHT DX DY XW YW VOL ASSIG",
     "FORMAT %5d %5d %9.3f %9.3f %12.3f %12.3f %15.3e %8.3f %8.3f %8.3f %8.3f %15.3e %s",
-    ""
+    " "
   ]
 
   tab_data = []
