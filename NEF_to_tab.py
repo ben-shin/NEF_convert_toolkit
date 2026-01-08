@@ -43,8 +43,8 @@ def convert_nef_to_tab(nef_path, sf_h, sf_n):
   header = [
     "REMARK nmrDraw Peak List",
     "DATA_TYPE 2D_PEAK_LIST",
-    "VARS   INDEX ID X_PPM Y_PPM X_HZ Y_HZ HEIGHT DX DY ASSIG",
-    "FORMAT %5d %5d %9.3f %9.3f %12.3f %12.3f %15.3e %8.3f %8.3f %s",
+    "VARS   INDEX ID X_PPM Y_PPM X_HZ Y_HZ HEIGHT DX DY XW YW VOL ASSIG",
+    "FORMAT %5d %5d %9.3f %9.3f %12.3f %12.3f %15.3e %8.3f %8.3f %8.3f %8.3f %15.3e %s",
   ]
 
   tab_data = []
@@ -56,8 +56,8 @@ def convert_nef_to_tab(nef_path, sf_h, sf_n):
     ppm_n = float(parts[idx_pos1])
     ppm_h = float(parts[idx_pos2])
     
-    height_str = float(parts[idx_height])
-    height = float(height_str) if height_str != '.' else 0.0
+    height_val = parts[idx_height]
+    height = float(height_val) if height_val != '.' else 0.0
     
     hz_h = ppm_h * sf_h
     hz_n = ppm_n * sf_n
@@ -66,7 +66,7 @@ def convert_nef_to_tab(nef_path, sf_h, sf_n):
     if idx_res_num is not None and parts[idx_res_num] != '.':
       assig = f"{parts[idx_res_nam]}{parts[idx_res_num]}"
 
-    tab_row = f"{i+1:5d} {peak_id:5d} {ppm_h:9.3f} {ppm_n:9.3f} {hz_h:12.3f} {hz_n:12.3f} {height:15.3e} {0.0:8.3f} {0.0:8.3f} {assig}"
+    tab_row = f"{i+1:5d} {peak_id:5d} {ppm_h:9.3f} {ppm_n:9.3f} {hz_h:12.3f} {hz_n:12.3f} {height:15.3e} {0.0:8.3f} {0.0:8.3f} {10.0:8.3f} {10.0:8.3f} {height:15.3e} {assig}"
     tab_data.append(tab_row)
 
   with open(output_file, 'w') as f:
