@@ -28,7 +28,7 @@ def convert_nef_to_nmrdraw(input_path, sfh, sfn, output_path="peaks.tab"):
 
       idx = int(parts[0])
       vol = float(parts[2]) if parts[2] != '.' else 0.0
-      height = float(parts[4]) if parts[4] != '.' else floats 0.0
+      height = float(parts[4]) if parts[4] != '.' else 0.0
       n_ppm = float(parts[6])  # N15
       h_ppm = float(parts[8])  # H1
 
