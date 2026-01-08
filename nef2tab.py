@@ -18,7 +18,7 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path="peaks.tab"):
     if '_nef_peak.index' in line:
       is_peak_loop = True
       continue
-    if is_peak_look:
+    if is_peak_loop:
       parts = line.split()
       if not parts or parts[0] == 'stop_':
         is_peak_loop = False
