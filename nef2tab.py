@@ -2,7 +2,7 @@ import pandas as pd
 import argparse
 import sys
 
-def convert_nef_to_nmrdraw(input_path, sfh, sfn, output_path="peaks.tab"):
+def convert_nef_to_tab(input_path, sfh, sfn, output_path="peaks.tab"):
   try:
     with open(input_path, 'r') as f:
       nef_text = f.read()
