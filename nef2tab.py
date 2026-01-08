@@ -1,16 +1,16 @@
 import argparse
 
-def convert_nef_to_tab(input_path, sfh, sfn, output_path, dimx, dimy):
-    # --- SPECTRUM PARAMETERS (From your fid.com & nhsqc.com) ---
-    # X-Axis (Nitrogen)
-    x_car = 117.006
-    x_sw_hz = 2129.472
+def convert_nef_to_tab(input_path, sfh, sfn, output_path):
+    # --- EXACT BOUNDS FROM YOUR REMARK ROI ---
+    # Proton (1H)
+    h_p1 = 12.709
+    h_pn = 4.684
+    h_n  = 514
     
-    # Y-Axis (Proton) - Extracted 11.0 to 6.0
-    y_car = 4.700 # Original carrier
-    y_sw_hz = 9615.385
-    y_ext_top = 11.0 # The 'x1' from your EXT
-    y_ext_bot = 6.0  # The 'xn' from your EXT
+    # Nitrogen (15N)
+    n_p1 = 134.509
+    n_pn = 99.400
+    n_n  = 342
     
     try:
         with open(input_path, 'r') as f:
@@ -48,17 +48,14 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path, dimx, dimy):
                 atom = parts[13] if len(parts) > 13 and parts[13] != '.' else ""
                 assig = f"{res_num}{res_name}-{atom}" if res_num else "None"
 
-                # --- COORDINATE MATH ---
+                # --- LINEAR INTERPOLATION MATH ---
+                # Formula: Point = 1 + (PPM_val - PPM_start) / (PPM_end - PPM_start) * (Total_Points - 1)
                 
-                # 1. Nitrogen X-Axis Point
-                # Points are calculated relative to the carrier (center)
-                x_sw_ppm = x_sw_hz / sfn
-                x_axis = (x_car + (x_sw_ppm / 2.0) - n_ppm) / x_sw_ppm * dimx
-
-                # 2. Proton Y-Axis Point (Handling the EXT 11-6ppm)
-                # Since you extracted, point 1 is at 11ppm and point dimy is at 6ppm
-                y_ext_width = y_ext_top - y_ext_bot
-                y_axis = (y_ext_top - h_ppm) / y_ext_width * dimy
+                # If Nitrogen is X-axis in nmrDraw:
+                x_axis = 1 + (n_ppm - n_p1) / (n_pn - n_p1) * (n_n - 1)
+                
+                # If Proton is Y-axis in nmrDraw:
+                y_axis = 1 + (h_ppm - h_p1) / (h_pn - h_p1) * (h_n - 1)
 
                 row = [
                     idx, x_axis, y_axis, 0.0, 0.0,
@@ -71,7 +68,7 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path, dimx, dimy):
             except:
                 continue
 
-    # Writing the table
+    # Writing the table with correct NMRPipe padding
     with open(output_path, 'w') as f:
         f.write("VARS   INDEX X_AXIS Y_AXIS DX DY X_PPM Y_PPM X_HZ Y_HZ XW YW XW_HZ YW_HZ X1 X3 Y1 Y3 HEIGHT DHEIGHT VOL PCHI2 TYPE ASS CLUSTID MEMCNT\n")
         f.write("FORMAT %5d %9.3f %9.3f %6.3f %6.3f %8.3f %8.3f %9.3f %9.3f %7.3f %7.3f %8.3f %8.3f %4d %4d %4d %4d %+e %+e %+e %.5f %d %s %4d %4d\n\n")
@@ -79,15 +76,13 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path, dimx, dimy):
         f.write("NULLSTRING *\n\n")
         for p in peak_data:
             f.write("%5d %9.3f %9.3f %6.3f %6.3f %8.3f %8.3f %9.3f %9.3f %7.3f %7.3f %8.3f %8.3f %4d %4d %4d %4d %+14.6e %+14.6e %+14.6e %.5f %d %s %4d %4d\n" % tuple(p))
-    print(f"Success: {len(peak_data)} peaks converted.")
+    print(f"Success: {len(peak_data)} peaks mapped to ROI bounds.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True)
     parser.add_argument('--sfh', type=float, required=True)
     parser.add_argument('--sfn', type=float, required=True)
-    parser.add_argument('--dimx', type=int, default=1024)
-    parser.add_argument('--dimy', type=int, default=512)
     parser.add_argument('--out', default='peaks.tab')
     args = parser.parse_args()
-    convert_nef_to_tab(args.data, args.sfh, args.sfn, args.out, args.dimx, args.dimy)
+    convert_nef_to_tab(args.data, args.sfh, args.sfn, args.out)
