@@ -45,6 +45,7 @@ def convert_nef_to_tab(nef_path, sf_h, sf_n):
     "DATA_TYPE 2D_PEAK_LIST",
     "VARS   INDEX ID X_PPM Y_PPM X_HZ Y_HZ HEIGHT DX DY XW YW VOL ASSIG",
     "FORMAT %5d %5d %9.3f %9.3f %12.3f %12.3f %15.3e %8.3f %8.3f %8.3f %8.3f %15.3e %s",
+    ""
   ]
 
   tab_data = []
@@ -64,6 +65,7 @@ def convert_nef_to_tab(nef_path, sf_h, sf_n):
 
     assig = "None"
     if idx_res_num is not None and parts[idx_res_num] != '.':
+      res_name = parts[idx_res_nam].replace(" ", "")
       assig = f"{parts[idx_res_nam]}{parts[idx_res_num]}"
 
     tab_row = f"{i+1:5d} {peak_id:5d} {ppm_h:9.3f} {ppm_n:9.3f} {hz_h:12.3f} {hz_n:12.3f} {height:15.3e} {0.0:8.3f} {0.0:8.3f} {10.0:8.3f} {10.0:8.3f} {height:15.3e} {assig}"
