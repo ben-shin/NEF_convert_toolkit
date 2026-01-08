@@ -1,16 +1,20 @@
 import argparse
 
 def convert_nef_to_tab(input_path, sfh, sfn, output_path):
-    # --- EXACT BOUNDS FROM YOUR REMARK ROI ---
-    # Proton (1H)
-    h_p1 = 12.709
-    h_pn = 4.684
-    h_n  = 514
+    # --- ACTUAL FILE DIMENSIONS ---
+    dim_x_n = 1024  # Nitrogen
+    dim_y_h = 321   # Proton
     
-    # Nitrogen (15N)
+    # --- SPECTRUM BOUNDARIES ---
+    # Derived from your ROI and CAR:
+    # N15 (X-axis): 1024 points
     n_p1 = 134.509
     n_pn = 99.400
-    n_n  = 342
+    
+    # H1 (Y-axis): 321 points
+    # We use your EXT limits for the Proton vertical axis
+    h_p1 = 11.0 
+    h_pn = 6.0
     
     try:
         with open(input_path, 'r') as f:
@@ -31,7 +35,7 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path):
             if clean_line == 'stop_' or clean_line.startswith('save_'):
                 is_peak_loop = False
                 continue
-            if clean_line.startswith('_') or not clean_line:
+            if not clean_line or clean_line.startswith('_'):
                 continue
 
             parts = clean_line.split()
@@ -48,14 +52,12 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path):
                 atom = parts[13] if len(parts) > 13 and parts[13] != '.' else ""
                 assig = f"{res_num}{res_name}-{atom}" if res_num else "None"
 
-                # --- LINEAR INTERPOLATION MATH ---
-                # Formula: Point = 1 + (PPM_val - PPM_start) / (PPM_end - PPM_start) * (Total_Points - 1)
+                # --- MAPPING TO FULL FILE GRID ---
+                # X = Nitrogen (1024 pts)
+                x_axis = 1 + (n_ppm - n_p1) / (n_pn - n_p1) * (dim_x_n - 1)
                 
-                # If Nitrogen is X-axis in nmrDraw:
-                x_axis = 1 + (n_ppm - n_p1) / (n_pn - n_p1) * (n_n - 1)
-                
-                # If Proton is Y-axis in nmrDraw:
-                y_axis = 1 + (h_ppm - h_p1) / (h_pn - h_p1) * (h_n - 1)
+                # Y = Proton (321 pts)
+                y_axis = 1 + (h_ppm - h_p1) / (h_pn - h_p1) * (dim_y_h - 1)
 
                 row = [
                     idx, x_axis, y_axis, 0.0, 0.0,
@@ -68,7 +70,6 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path):
             except:
                 continue
 
-    # Writing the table with correct NMRPipe padding
     with open(output_path, 'w') as f:
         f.write("VARS   INDEX X_AXIS Y_AXIS DX DY X_PPM Y_PPM X_HZ Y_HZ XW YW XW_HZ YW_HZ X1 X3 Y1 Y3 HEIGHT DHEIGHT VOL PCHI2 TYPE ASS CLUSTID MEMCNT\n")
         f.write("FORMAT %5d %9.3f %9.3f %6.3f %6.3f %8.3f %8.3f %9.3f %9.3f %7.3f %7.3f %8.3f %8.3f %4d %4d %4d %4d %+e %+e %+e %.5f %d %s %4d %4d\n\n")
@@ -76,7 +77,7 @@ def convert_nef_to_tab(input_path, sfh, sfn, output_path):
         f.write("NULLSTRING *\n\n")
         for p in peak_data:
             f.write("%5d %9.3f %9.3f %6.3f %6.3f %8.3f %8.3f %9.3f %9.3f %7.3f %7.3f %8.3f %8.3f %4d %4d %4d %4d %+14.6e %+14.6e %+14.6e %.5f %d %s %4d %4d\n" % tuple(p))
-    print(f"Success: {len(peak_data)} peaks mapped to ROI bounds.")
+    print(f"Success: {len(peak_data)} peaks mapped to {dim_x_n}x{dim_y_h} grid.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
